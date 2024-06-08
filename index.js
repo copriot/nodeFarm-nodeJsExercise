@@ -1,7 +1,8 @@
 //http modülünü çağırdık
 const http = require("http");
+const url = require("url");
 const fs = require("fs");
-
+const replaceTemplate = require("./modules/replaceTemplate.js");
 
 // API gelen istekleri izler ve cevap gönderir
 
@@ -22,19 +23,23 @@ Bu fonksiyon 2 parametre alır
 let tempOverview = fs.readFileSync("templates/overview.html", "utf-8");
 let tempProduct = fs.readFileSync("templates/product.html", "utf-8");
 //card htmlini oku
-let tempCard = fs.readFileSync("templates/card.html", "utf8");
+let tempCard = fs.readFileSync("templates/card.html", "utf-8");
 
 
 //ürün verilerini oku (json formatında alır)
 let data = fs.readFileSync("dev-data/data.json", "utf-8");
 
 //json formatındaki veriyi js formatına çevir
-let dataObj = JSON.parse(data);
+const dataObj = JSON.parse(data);
 
 
 
 
-let server = http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
+
+    const { pathname, query } = url.parse(req.url, true);
+
+
     // console.log("istek tespit edildi");
     // console.log("İstekk", req);
     // if(req.url === "/"){
@@ -43,22 +48,37 @@ let server = http.createServer((req, res) => {
     //    return res.end("Şuan detay sayfadasınız")
     // }
     // res.end("sayfa bulunamadı");
-
-    switch (req.url) {
+    console.log(query.id, "id numaralı detayı görüntüleniyor")
+    switch (pathname) {
         case "/overview":
 
 
 
             //ürünler dizisini dön dizideki eleman kadar kart oluştur
-            let cards = dataObj.map((card) => tempCard);
-
+            const cards = dataObj.map((el) => replaceTemplate(tempCard, el));
+            //anasayfadaki product ifadesinin yerine kartları yer değiştir
             tempOverview = tempOverview.replace("{%PRODUCT_CARDS%}", cards);
             return res.end(tempOverview);
 
 
-
+        //urldeki idli ürünü dizide bul
         case "/product":
-            return res.end(tempProduct);
+            const product = dataObj[query.id];
+            console.log(product)
+
+            //detay sayfasının htmlini ürünün bilgilerine göre düzenle
+            const output = replaceTemplate(tempProduct, product)
+
+
+
+
+
+            //clienta html i gönder
+            return res.end(output);
+
+
+
+
         default:
             return res.end("aranan sayfa bulunamadı");
     }
